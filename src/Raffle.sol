@@ -29,14 +29,20 @@ pragma solidity ^0.8.18;
  * @dev Implemets ChainLink VRFv2.5
  */
 
-import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
-import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
+import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
+import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 
-contract Raffle is VRFConsumerBaseV2 {
+contract Raffle is VRFConsumerBaseV2Plus {
     // errors
     error Raffle__SenderMoreToEnterRaffle();
 
+    // uint16 private constant REQUSER_CONFIRMATIONS = 3;
+    uint16 private constant REQUEST_CONFIRMATIONS = 3;
+    uint32 private constant NUM_WORDS = 1;
+    bytes32 private immutable i_KeyHash;
+    uint256 private immutable i_subscriptionId;
     uint256 private immutable i_entranceFee;
+    uint32 private immutable i_callbackGasLimit;
     //@dev The duration of the lottery period in seconds
     uint256 private immutable i_interval;
     //玩家数组
@@ -45,12 +51,6 @@ contract Raffle is VRFConsumerBaseV2 {
     // address immutable i_vrfCoordinator;
 
     //chainlink VRF realted variables
-    VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
-    bytes32 private immutable i_gasLane;
-    uint256 private immutable i_subscriptionId;
-    uint256 private constant REQUSER_CONFIRMARIONS = 3;
-    uint32 private immutable i_callbackGasLimit;
-    uint32 private constant NUM_WORDS = 1;
 
     event RaffleEntered(address indexed player);
 
@@ -61,12 +61,11 @@ contract Raffle is VRFConsumerBaseV2 {
         bytes32 gasLane,
         uint256 subscriptionId,
         uint32 callbackGasLimit
-    ) VRFConsumerBaseV2(vrfCoordinator) {
+    ) VRFConsumerBaseV2Plus(vrfCoordinator) {
         i_entranceFee = entranceFee;
         i_interval = interval;
         s_lastTimeStamp = block.timestamp;
-        i_vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinator);
-        i_gasLane = gasLane;
+        i_KeyHash = gasLane;
         i_subscriptionId = subscriptionId;
         i_callbackGasLimit = callbackGasLimit;
     }
@@ -87,27 +86,30 @@ contract Raffle is VRFConsumerBaseV2 {
     //自动调用
     //
     function pickWinner() public {
-        // s_requestId = s_vrfCoordinator.requestRandomWords(
-        //     VRFV2PlusClient.RandomWordsRequest({
-        //         keyHash: keyHash,
-        //         subId: s_subscriptionId,
-        //         requestConfirmations: requestConfirmations,
-        //         callbackGasLimit: callbackGasLimit,
-        //         numWords: numWords,
-        //         extraArgs: VRFV2PlusClient._argsToBytes(
-        //             VRFV2PlusClient.ExtraArgsV1({nativePayment: false})
-        //         )
-        //     })
-        // );
-
         if ((block.timestamp - s_lastTimeStamp) < i_interval) {
             revert();
         }
+        VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient
+            .RandomWordsRequest({
+                keyHash: i_KeyHash,
+                subId: i_subscriptionId,
+                requestConfirmations: REQUEST_CONFIRMATIONS,
+                callbackGasLimit: i_callbackGasLimit,
+                numWords: NUM_WORDS,
+                extraArgs: VRFV2PlusClient._argsToBytes(
+                    VRFV2PlusClient.ExtraArgsV1({nativePayment: false})
+                )
+            });
+        uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
     }
+
     function fulfillRandomWords(
-        uint256 requestId,
-        uint256[] memory randomWords
-    ) internal override {}
+        uint256,
+        /* requestId */ uint256[] calldata randomWords
+    ) internal override {
+        //pick a winner here, send him the reward and reset the raffle
+    }
+
     /** Getter Function */
     function getEntranceFee() external view returns (uint256) {
         return i_entranceFee;
