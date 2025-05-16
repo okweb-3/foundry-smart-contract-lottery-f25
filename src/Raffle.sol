@@ -37,6 +37,11 @@ contract Raffle is VRFConsumerBaseV2Plus {
     error Raffle__SenderMoreToEnterRaffle();
     error Raffle__TransferFailed();
     error Raffle__NotOpen();
+    error Raffle__UpkeepNotNeed(
+        uint256 balance,
+        uint256 playersLength,
+        uint256 raffleState
+    );
     // Type declarations
     enum RaffleState {
         OPEN, //0
@@ -95,11 +100,35 @@ contract Raffle is VRFConsumerBaseV2Plus {
     //获取随机数
     //使用随机数
     //自动调用
-    //
-    function pickWinner() public {
+    //什么时候选出获胜者
+    /**
+     * @dev 这个函数将会被chainlink节点调用
+     * 这个抽奖准备好才会选出获胜者
+     * 以下的要求满足了 upkeepNeeded才能为真
+     1. 抽奖运行之间的间隔已经过去
+     2. 彩票仍然开放
+     3. 合约中有eth
+     4. 隐藏的条件，你的订阅里要有link */
+    function checkUpkeep(
+        bytes memory
+    ) public view returns (bool upkeepNeeded, bytes memory /* performData */) {
+        bool timeHasPassed = (block.timestamp - s_lastTimeStamp) >= i_interval;
+        bool isOpen = s_RaffleState == RaffleState.OPEN;
+        bool hasBalance = address(this).balance > 0;
+        bool hasPlayers = s_players.length > 0;
+        upkeepNeeded = timeHasPassed && isOpen && hasBalance && hasPlayers;
+        return (upkeepNeeded, "");
+    }
+
+    function performUpkeep(bytes calldata /* performData */) public {
         //pick a winner here, send him the reward and reset the raffle
-        if ((block.timestamp - s_lastTimeStamp) < i_interval) {
-            revert();
+        (bool upkeepNeeded, ) = checkUpkeep("");
+        if (upkeepNeeded) {
+            revert Raffle__UpkeepNotNeed(
+                address(this).balance,
+                s_players.length,
+                uint256(s_RaffleState)
+            );
         }
 
         s_RaffleState = RaffleState.CALCULATING;
