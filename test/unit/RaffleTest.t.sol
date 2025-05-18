@@ -28,8 +28,34 @@ contract RaffleTest is Test {
         gasLane = config.gasLane;
         callbackGasLimit = config.callbackGasLimit;
         subscriptionId = config.subscriptionId;
+        vm.deal(PLAYER, STARTING_PLAYER_BALANCE);
     }
     function testRaffleInitializesOpenState() public view {
         assert(raffle.getRaffleState() == Raffle.RaffleState.OPEN);
+    }
+    /*//////////////////////////////////////////////////////////////
+                              ENTER RAFFLE
+    //////////////////////////////////////////////////////////////*/
+    function testRaffleRevertsWhenYouDontPayEnough() public {
+        //Arrange
+        // 告诉 Foundry 的虚拟机模拟下面的调用是由 PLAYER 地址发出的，而不是测试合约自身
+        vm.prank(PLAYER);
+        //Act
+        //Assert
+        // 这是断言阶段（Assert），它告诉测试框架「我希望接下来的函数调用会发生 Raffle__SendMoreToEnterRaffle 这个错误」。
+        // 其中：
+        // vm.expectRevert(...) 是 Foundry 提供的一个测试工具函数，用于预期抛出错误。
+        // Raffle.Raffle__SendMoreToEnterRaffle.selector 是自定义错误的 selector，相当于错误的标识符。
+        vm.expectRevert(Raffle.Raffle__SenderMoreToEnterRaffle.selector);
+        raffle.enterRaffle();
+    }
+    function testRaffleRecordsPlayersWhenTheyEnter() public {
+        //Arrange
+        vm.prank(PLAYER);
+        //Act
+        raffle.enterRaffle{value: entranceFee}();
+        //Assert
+        address playerRecorded = raffle.getPlayer(0);
+        assert(playerRecorded == PLAYER);
     }
 }
