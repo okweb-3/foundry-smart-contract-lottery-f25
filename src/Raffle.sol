@@ -36,7 +36,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     // errors
     error Raffle__SenderMoreToEnterRaffle();
     error Raffle__TransferFailed();
-    error Raffle__NotOpen();
+    error Raffle__RaffleNotOpen();
     error Raffle__UpkeepNotNeed(
         uint256 balance,
         uint256 playersLength,
@@ -89,7 +89,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
             revert Raffle__SenderMoreToEnterRaffle();
         }
         if (s_RaffleState != RaffleState.OPEN) {
-            revert Raffle__NotOpen();
+            revert Raffle__RaffleNotOpen();
         }
         //将当前合约调用的地址添加到splayers数组中。
         s_players.push(payable(msg.sender));
