@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 import {Script} from "lib/forge-std/src/Script.sol";
 import {Raffle} from "src/Raffle.sol";
 import {HelperConfig} from "script/HelperConfig.s.sol";
+import {CreateSubscription} from "script/Interactions.s.sol";
 
 contract DeployRaffle is Script {
     function run() external returns (Raffle) {}
@@ -12,6 +13,12 @@ contract DeployRaffle is Script {
         //本地  本地模拟部署合约 获取本地的配置
         //sepolia  获取sepolia的配置
         HelperConfig.NetWorkConfig memory config = helperConfig.getConfig();
+        if (config.subscriptionId == 0) {
+            CreateSubscription createSubscription = new CreateSubscription();
+            (config.subscriptionId, config.vrfCoordinator) = createSubscription
+                .createSubscription(config.vrfCoordinator);
+        }
+
         vm.startBroadcast();
         Raffle raffle = new Raffle(
             config.entranceFee,
@@ -21,6 +28,7 @@ contract DeployRaffle is Script {
             config.subscriptionId,
             config.callbackGasLimit
         );
+
         vm.stopBroadcast();
         return (raffle, helperConfig);
     }
