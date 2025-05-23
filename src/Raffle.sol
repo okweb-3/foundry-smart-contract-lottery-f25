@@ -123,7 +123,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     function performUpkeep(bytes calldata /* performData */) public {
         //pick a winner here, send him the reward and reset the raffle
         (bool upkeepNeeded, ) = checkUpkeep("");
-        if (upkeepNeeded) {
+        if (!upkeepNeeded) {
             revert Raffle__UpkeepNotNeed(
                 address(this).balance,
                 s_players.length,
@@ -146,7 +146,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
                 )
             });
         //s_vrfCoordinator 是继承来的
-        uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
+        s_vrfCoordinator.requestRandomWords(request);
     }
     //处理响应
     // CEI：Checks Effects Interactions

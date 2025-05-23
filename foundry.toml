@@ -8,3 +8,7 @@ remappings = [
     '@solmate=lib/solmate/src/',
 
 ]
+fs_permissions = [
+    { access = "read", path = "./broadcast" },
+    { access = "read", path = "./reports" },
+]
